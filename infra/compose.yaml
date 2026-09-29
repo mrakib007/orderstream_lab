@@ -7,6 +7,8 @@ services:
     hostname: kafka
     ports:
       - "127.0.0.1:9092:9092"
+    expose:
+      - "9997"
     environment:
       KAFKA_NODE_ID: "1"
       KAFKA_PROCESS_ROLES: "broker,controller"
@@ -21,6 +23,8 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
       KAFKA_NUM_PARTITIONS: "1"
+      KAFKA_JMX_PORT: "9997"
+      KAFKA_JMX_HOSTNAME: "kafka"
     volumes:
       - kafka-data:/tmp/kraft-combined-logs
     networks:
@@ -62,6 +66,8 @@ services:
       DYNAMIC_CONFIG_ENABLED: "true"
       KAFKA_CLUSTERS_0_NAME: "OrderStream local"
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:19092"
+      KAFKA_CLUSTERS_0_METRICS_TYPE: "JMX"
+      KAFKA_CLUSTERS_0_METRICS_PORT: "9997"
     depends_on:
       kafka:
         condition: service_healthy
