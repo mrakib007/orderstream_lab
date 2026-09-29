@@ -7,9 +7,10 @@
     "frontend"
   ],
   "scripts": {
-    "dev": "concurrently -k -n api,worker,web -c blue,magenta,green \"npm:dev:api\" \"npm:dev:worker\" \"npm:dev:web\"",
+    "dev": "concurrently -k -n api,orders,notifications,web -c blue,magenta,yellow,green \"npm:dev:api\" \"npm:dev:worker\" \"npm:dev:notifications\" \"npm:dev:web\"",
     "dev:api": "npm run dev --workspace backend",
     "dev:worker": "npm run worker --workspace backend",
+    "dev:notifications": "npm run notifications --workspace backend",
     "dev:web": "npm run dev --workspace frontend",
     "db:init": "npm run db:init --workspace backend",
     "infra:up": "podman compose -f infra/compose.yaml up -d",

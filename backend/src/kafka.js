@@ -7,3 +7,4 @@ export const kafka = new Kafka({
 });
 
 export const producer = kafka.producer();
+export const admin = kafka.admin();

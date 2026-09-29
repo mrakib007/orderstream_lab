@@ -6,7 +6,7 @@ try {
   const schemaPath = fileURLToPath(new URL('./schema.sql', import.meta.url));
   const schema = await readFile(schemaPath, 'utf8');
   await pool.query(schema);
-  console.log('Database is ready: orders table created or already exists.');
+  console.log('Database schema is ready: catalog and learning tables created or already present.');
 } catch (error) {
   console.error('Could not initialize PostgreSQL. Check backend/.env and that the orderstream_lab database exists.');
   console.error(error.message);

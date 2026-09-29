@@ -1,6 +1,6 @@
 # Kafka Learning Dashboard and Multi-Topic Order Flow
 
-**Status:** Draft for learner review. The design direction was approved on 2026-09-29; implementation has not started.
+**Status:** Approved for implementation on 2026-09-29.
 
 ## Purpose
 

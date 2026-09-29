@@ -38,18 +38,19 @@ services:
 
   kafka-init:
     image: docker.io/apache/kafka:4.3.1
-    entrypoint: ["/opt/kafka/bin/kafka-topics.sh"]
-    command:
-      - "--bootstrap-server"
-      - "kafka:19092"
-      - "--create"
-      - "--if-not-exists"
-      - "--topic"
-      - "orders.created"
-      - "--partitions"
-      - "1"
-      - "--replication-factor"
-      - "1"
+    entrypoint: ["/bin/bash", "-ec"]
+    command: |
+      ensure_topic() {
+        topic="$1"
+        partitions="$2"
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic "$topic" --partitions "$partitions" --replication-factor 1
+        current=$(/opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --describe --topic "$topic" | sed -n 's/.*PartitionCount: \([0-9]*\).*/\1/p' | head -1)
+        if [ -n "$current" ] && [ "$current" -lt "$partitions" ]; then
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --alter --topic "$topic" --partitions "$partitions"
+        fi
+      }
+      ensure_topic order_events 5
+      ensure_topic notification_events 3
     depends_on:
       kafka:
         condition: service_healthy

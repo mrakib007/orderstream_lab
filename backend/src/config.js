@@ -9,5 +9,8 @@ export const config = {
     .split(',')
     .map((broker) => broker.trim())
     .filter(Boolean),
-  ordersTopic: process.env.ORDERS_TOPIC ?? 'orders.created',
+  ordersTopic: process.env.ORDERS_TOPIC ?? 'order_events',
+  notificationsTopic: process.env.NOTIFICATIONS_TOPIC ?? 'notification_events',
+  orderGroupId: 'order_processing_group',
+  notificationGroupId: 'notification_workers',
 };
