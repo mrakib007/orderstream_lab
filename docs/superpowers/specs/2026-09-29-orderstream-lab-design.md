@@ -1,6 +1,6 @@
 # OrderStream Lab design
 
-**Status:** Proposed for review  
+**Status:** Approved for implementation by user on 2026-09-29
 **Purpose:** Learn Kafka by building and observing a small full-stack order-processing app.
 
 ## What the learner will build
@@ -11,10 +11,11 @@ The goal is to make the Kafka path visible and understandable, not to build a pr
 
 ## Where things run
 
-- The primary `orderstream-lab` workspace holds the project files directly: `frontend/`, `backend/`, and `infra/`.
-- Podman Desktop runs its Linux machine through WSL. Kafka runs inside a Podman container in that machine; Kafka is not installed as a Windows program. The Kafka image and its named data volume are held in Podman's managed storage.
+- The repository root holds `frontend/`, `backend/`, and `infra/`.
+- Podman Desktop runs its Linux machine through WSL. Kafka and Kafbat UI run as Podman containers, configured together in `infra/compose.yaml`. Kafka is not installed as a Windows program. Kafka's data is kept in a named Podman volume.
 - The existing Windows Node.js and PostgreSQL installations are used for the frontend, API, worker, and database. The API and worker connect to Kafka on `localhost:9092` and PostgreSQL on `localhost:5432`.
-- `infra/compose.yaml` starts one Apache Kafka broker in KRaft mode with a persistent named volume. The app does not need a manually created Podman Pod.
+- `infra/compose.yaml` starts one Apache Kafka broker in KRaft mode and Kafbat UI on the same private container network. Kafka advertises `localhost:9092` to Windows applications and `kafka:19092` to containers. Kafbat UI is available at `http://localhost:8080`.
+- The app does not need a manually created Podman Pod or Docker Desktop.
 - `podman compose` uses the available external Compose provider to talk to Podman. Docker Desktop or a Docker Engine is not required.
 
 ## Message and data flow
@@ -32,17 +33,18 @@ The event contains an event ID, order ID, creation time, product, and quantity. 
 - **Frontend:** React with Vite; order form and order-status list.
 - **API:** Node.js with Express; validates requests, stores pending orders, publishes events, and serves order status.
 - **Worker:** A separate Node.js process using KafkaJS; consumes order events and updates PostgreSQL.
-- **Kafka:** Apache Kafka's official container image, started by Podman Compose.
+- **Kafka:** Apache Kafka's official container image, started by Podman Compose with a persistent named volume and separate host/container listeners.
+- **Kafka visual UI:** Kafbat UI, available in the browser at `http://localhost:8080` and connected to the broker over the private Podman network.
 - **Database:** The existing local PostgreSQL service; an `orders` table stores order data and processing status.
 
 ## First learning checkpoints
 
-1. Start Kafka and inspect the running container.
-2. Create the `orders.created` topic and send/consume one message from Kafka's command-line tools.
+1. Start Kafka and Kafbat UI with the Podman Compose file; inspect the broker in Podman Desktop and open the UI at `http://localhost:8080`.
+2. Inspect the `orders.created` topic in Kafbat UI and send/consume a message from Kafka's command-line tools.
 3. Submit an order from the web page and follow its message through the API, Kafka worker, and PostgreSQL status update.
-4. Stop and restart the worker, then inspect its consumer group and offsets.
+4. Stop and restart the worker, then inspect its consumer group and offsets in Kafbat UI.
 
-The first version intentionally leaves out Kubernetes, multiple brokers, authentication, production high availability, a Kafka web console, and an automated test suite. Those can be added as separate lessons later.
+The first version intentionally leaves out Kubernetes, multiple brokers, authentication, production high availability, and an automated test suite. Those can be added as separate lessons later.
 
 ## Failure behavior and limits
 
