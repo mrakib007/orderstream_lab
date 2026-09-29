@@ -57,3 +57,15 @@ Open [http://localhost:5173](http://localhost:5173), submit an order, then watch
 3. Submit an order before starting the worker; it stays pending. Start `npm run dev:worker` in another terminal and watch it become processed.
 
 This is a single-broker local learning setup, not a production deployment. Kafka's data is stored in a named Podman volume. `npm run infra:down` keeps that volume; deleting the volume removes Kafka's stored topics and messages.
+
+## Generate a batch of orders
+
+With Kafka, PostgreSQL, the API, and the worker running, use:
+
+```powershell
+npm run orders:bulk --workspace backend
+```
+
+The script sends 1,000 orders through the existing API, with up to 10 requests in flight. It watches each created order's PostgreSQL status for up to two minutes and writes a per-order CSV report under `backend/reports/`. Use `Topics > orders.created > Messages` in Kafbat UI to inspect the Kafka events. You can optionally pass a count and concurrency, for example `npm run orders:bulk --workspace backend -- 100 5`.
+
+To observe Kafka holding events before a consumer processes them, stop only the worker before running the script. The orders should remain `pending`; start the worker again while the script is watching, and observe them move to `processed`.
