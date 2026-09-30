@@ -21,7 +21,7 @@ export function createSportsAlertService({ alertModel, config }) {
         topic: config.sportsAlertEventsTopic,
         message: ({ match, event: sourceEvent, eventTeam }) => {
           if (sourceEvent.eventType === 'match_completed') {
-            return match.homeTeam + ' ' + match.awayTeam + ' match finished.';
+            return match.homeTeam + ' vs ' + match.awayTeam + ' match finished.';
           }
           const teamName = eventTeam ?? sourceEvent.teamId;
           if (sourceEvent.eventType === 'goal') {

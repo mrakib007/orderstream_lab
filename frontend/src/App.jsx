@@ -292,7 +292,7 @@ export default function App() {
           </div>
         </article>
       </section>
-      <footer className="footer"><span>Kafka · Node.js · PostgreSQL · Podman</span><span>No automatic polling · no automatic orders</span></footer>
+      <footer className="footer"><span>Kafka · Node.js · PostgreSQL · Redis · WebSockets · Podman</span><span>Sports metadata refreshes every 8 seconds · no automatic orders</span></footer>
     </main>
   );
 }

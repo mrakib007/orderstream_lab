@@ -149,7 +149,7 @@ export function createSportsProjectionModel(pool) {
           'last_event_sequence AS "lastEventSequence", reconciliation_required AS "reconciliationRequired"',
           [event.matchId, nextStatus, homeScore, awayScore, event.sequence],
         );
-        snapshot = updatedResult.rows[0];
+        snapshot = { ...match, ...updatedResult.rows[0] };
         await client.query('COMMIT');
         inTransaction = false;
       } catch (error) {

@@ -3,8 +3,10 @@ import { pool } from './db.js';
 import { admin, producer } from './kafka.js';
 import { createApp } from './app.js';
 import { attachSportsWebSocket } from './websocket.js';
+import { closeRedisClient, createRedisClient } from './redis.js';
 
-const app = createApp({ pool, admin, producer, config });
+const sportsRedis = createRedisClient();
+const app = createApp({ pool, admin, producer, config, redisClient: sportsRedis });
 
 let server;
 let sportsWebSocket;
@@ -16,6 +18,7 @@ async function shutdown() {
 
   if (sportsWebSocket) await sportsWebSocket.close().catch(() => {});
   if (server) await new Promise((resolve) => server.close(resolve));
+  closeRedisClient(sportsRedis);
   await admin.disconnect().catch(() => {});
   await producer.disconnect().catch(() => {});
   await pool.end().catch(() => {});
@@ -36,6 +39,9 @@ try {
   } catch (error) {
     console.error('Sports WebSocket gateway could not start:', error.message);
   }
+  void sportsRedis.connect().catch((error) => {
+    console.error('Sports match cache is unavailable; PostgreSQL remains the source:', error.message);
+  });
   console.log(
     'Connected to PostgreSQL and Kafka topics ' +
     config.ordersTopic + ' and ' + config.notificationsTopic + '.',

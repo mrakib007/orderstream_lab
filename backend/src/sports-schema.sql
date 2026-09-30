@@ -65,6 +65,8 @@ CREATE INDEX IF NOT EXISTS sports_match_events_match_sequence_idx
   ON sports_match_events (match_id, sequence);
 CREATE INDEX IF NOT EXISTS sports_match_events_occurred_at_idx
   ON sports_match_events (occurred_at DESC);
+CREATE INDEX IF NOT EXISTS sports_match_events_created_at_idx
+  ON sports_match_events (created_at DESC);
 
 CREATE TABLE IF NOT EXISTS sports_simulation_jobs (
   match_id TEXT PRIMARY KEY REFERENCES sports_matches(match_id),

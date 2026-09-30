@@ -156,6 +156,7 @@ export default function SportsDashboard() {
           getJson('/api/sports/fan-alerts?fanId=demo-fan'),
         ]);
         if (!active) return;
+        setError('');
         setTelemetry(nextTelemetry);
         setMatches(nextMatches);
         setAlerts(nextAlerts);
@@ -214,8 +215,15 @@ export default function SportsDashboard() {
         }
         if (event.fanId === 'demo-fan') {
           setAlerts((current) => [
-            { alertId: event.eventId, eventId: event.sourceEventId, ...event },
-            ...current.filter((alert) => alert.alertId !== event.eventId),
+            {
+              alertId: event.eventId,
+              eventId: event.sourceEventId,
+              matchId: event.matchId,
+              alertType: event.alertType,
+              message: event.message,
+              createdAt: event.createdAt,
+            },
+            ...current.filter((alert) => alert.alertId !== event.eventId && alert.eventId !== event.sourceEventId),
           ].slice(0, 50));
         }
       } catch {
@@ -255,7 +263,10 @@ export default function SportsDashboard() {
     ? latencies.reduce((sum, value) => sum + value, 0) / latencies.length
     : null, [latencies]);
   const metrics = telemetry?.metrics ?? {};
-  const canSimulate = selectedMatch && selectedMatch.status === 'scheduled' && selectedMatch.simulationStatus !== 'queued' && selectedMatch.simulationStatus !== 'running';
+  const canSimulate = selectedMatch && (
+    selectedMatch.simulationStatus === 'failed' ||
+    (selectedMatch.status === 'scheduled' && !['queued', 'running', 'completed'].includes(selectedMatch.simulationStatus))
+  );
 
   return (
     <section className="sports-lab" id="sports">
@@ -321,6 +332,14 @@ export default function SportsDashboard() {
         <summary>Open six worker roles in separate terminals</summary>
         <p>The simulate button only queues one match. Run these roles to publish, project, fan out, alert, and count events.</p>
         <div>{['npm run sports:simulator', 'npm run sports:outbox', 'npm run sports:score', 'npm run sports:fanout', 'npm run sports:alerts', 'npm run sports:analytics'].map((command) => <code key={command}>{command}</code>)}</div>
+      </details>
+
+      <details className="sports-commands">
+        <summary>Reliability lessons: retry, dedupe, replay, and dead letters</summary>
+        <p>The simulator and fan-alert worker save events in PostgreSQL outbox rows before Kafka publication. The publisher retries with per-key ordering; a crash after Kafka accepts a record can send it again.</p>
+        <p>Consumers deduplicate by event ID, and the score projection checks the next match sequence before changing the score. A gap pauses that match for reconciliation instead of guessing.</p>
+        <p>Each group keeps its own Kafka offsets. Replaying a group repeats delivery, so idempotent database writes protect scores, alerts, and analytics. After bounded retries, the failed record and source coordinates go to the dead-letter topic.</p>
+        <p>Redis Pub/Sub is live fan-out and can lose updates while a browser is disconnected. The dashboard reloads the durable event history from PostgreSQL when the socket connects.</p>
       </details>
     </section>
   );

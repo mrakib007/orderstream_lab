@@ -26,4 +26,5 @@ export const config = {
   sportsConsumerRetryDelayMs: Number(process.env.SPORTS_CONSUMER_RETRY_DELAY_MS ?? 200),
   sportsOutboxPollDelayMs: Number(process.env.SPORTS_OUTBOX_POLL_DELAY_MS ?? 300),
   sportsSimulatorPollDelayMs: Number(process.env.SPORTS_SIMULATOR_POLL_DELAY_MS ?? 1000),
+  sportsTelemetryCacheMs: Number(process.env.SPORTS_TELEMETRY_CACHE_MS ?? 5000),
 };

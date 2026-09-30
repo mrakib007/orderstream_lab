@@ -65,8 +65,8 @@ export function createSportsCatalogModel(pool) {
         'SELECT COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL \'60 seconds\')::int AS "eventsLastMinute", ' +
         'COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL \'5 minutes\')::int AS "eventsLastFiveMinutes", ' +
         'AVG(EXTRACT(EPOCH FROM (created_at - occurred_at)) * 1000) ' +
-        'FILTER (WHERE created_at >= NOW() - INTERVAL \'5 minutes\') AS "averageProjectionLatencyMs", ' +
-        'MAX(created_at) AS "lastProjectedAt" FROM sports_match_events',
+        'AS "averageProjectionLatencyMs", MAX(created_at) AS "lastProjectedAt" ' +
+        'FROM sports_match_events WHERE created_at >= NOW() - INTERVAL \'5 minutes\'',
       );
       const row = result.rows[0];
       return {

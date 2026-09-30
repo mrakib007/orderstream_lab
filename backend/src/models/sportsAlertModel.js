@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 export function createSportsAlertModel(pool) {
   return {
     async createAlerts({ event, alertEventId, alertType, message, topic }) {
@@ -43,9 +45,9 @@ export function createSportsAlertModel(pool) {
           const alertMessage = message({ match, event, eventTeam: match.eventTeam });
           const alertInsert = await client.query(
             'INSERT INTO sports_fan_alerts (alert_id, fan_id, event_id, match_id, alert_type, message) ' +
-            'VALUES (gen_random_uuid(), $1, $2, $3, $4, $5) ' +
+            'VALUES ($1, $2, $3, $4, $5, $6) ' +
             'ON CONFLICT (fan_id, event_id, alert_type) DO NOTHING RETURNING alert_id',
-            [fanId, event.eventId, event.matchId, alertType, alertMessage],
+            [randomUUID(), fanId, event.eventId, event.matchId, alertType, alertMessage],
           );
           if (!alertInsert.rowCount) continue;
           const createdAt = new Date().toISOString();

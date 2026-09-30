@@ -15,7 +15,7 @@ import { createLearningService } from './services/learningService.js';
 import { createOrderService } from './services/orderService.js';
 import { createSportsCatalogService } from './services/sportsCatalogService.js';
 
-export function createApp({ pool, admin, producer, config, logger = console }) {
+export function createApp({ pool, admin, producer, config, redisClient, logger = console }) {
   const productModel = createProductModel(pool);
   const orderModel = createOrderModel(pool);
   const notificationModel = createNotificationModel(pool);
@@ -33,7 +33,7 @@ export function createApp({ pool, admin, producer, config, logger = console }) {
       createLearningService({ pool, admin, config, learningModel, productModel }),
     ),
     sports: createSportsController(
-      createSportsCatalogService(sportsCatalogModel, { admin, config }),
+      createSportsCatalogService(sportsCatalogModel, { admin, config, redisClient, logger }),
       logger,
     ),
   };
