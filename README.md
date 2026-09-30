@@ -1,12 +1,12 @@
 # OrderStream Lab
 
-A hands-on Kafka project for tracing one order from a React page through a Node.js API, Kafka topics and consumer groups, and PostgreSQL.
+A hands-on Kafka project for tracing an OrderStream order and following live sports scores and fan alerts through React, a Node.js MVC API, Kafka topics and consumer groups, Redis, and PostgreSQL. See [the sports learning guide](docs/sports-scores-learning.md) for the architecture, worker roles, reliability lessons, and local load-study plan.
 
 ## What each part does
 
 - frontend/: the learning dashboard at http://localhost:5173.
-- backend/: the API plus two separate Kafka consumer processes.
-- infra/compose.yaml: the Podman Compose recipe for Kafka and Kafbat UI.
+- backend/: the MVC API, existing OrderStream workers, sports simulator, outbox publisher, and four sports consumer roles.
+- infra/compose.yaml: the Podman Compose recipe for Kafka, Kafbat UI, and Redis.
 - PostgreSQL: your existing local PostgreSQL installation.
 - Kafbat UI: the Kafka browser at http://localhost:8080.
 
