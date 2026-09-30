@@ -7,4 +7,5 @@ export const kafka = new Kafka({
 });
 
 export const producer = kafka.producer();
+export const sportsProducer = kafka.producer({ idempotent: true, maxInFlightRequests: 1 });
 export const admin = kafka.admin();

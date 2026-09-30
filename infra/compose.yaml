@@ -50,8 +50,17 @@ services:
             /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --alter --topic "$$topic" --partitions "$$partitions"
           fi
         }
+        create_topic() {
+          topic="$$1"
+          partitions="$$2"
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --create --if-not-exists --topic "$$topic" --partitions "$$partitions" --replication-factor 1
+        }
         ensure_topic order_events 5
         ensure_topic notification_events 3
+        # Sports topics are created once and never automatically resized, preserving per-key ordering.
+        create_topic sports.match-events.v1 6
+        create_topic sports.alert-events.v1 3
+        create_topic sports.match-events.dlq.v1 1
     depends_on:
       kafka:
         condition: service_healthy
@@ -77,6 +86,21 @@ services:
         condition: service_completed_successfully
     networks:
       - orderstream
+
+  redis:
+    image: docker.io/library/redis:7.4.2-alpine
+    container_name: orderstream-redis
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    networks:
+      - orderstream
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
 
 volumes:
   kafka-data:
