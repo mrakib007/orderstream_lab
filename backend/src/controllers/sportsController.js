@@ -35,5 +35,9 @@ export function createSportsController(sportsService, logger = console) {
         await sportsService.listFanAlerts(request.query.fanId),
       ), 'Could not load fan alerts.');
     },
+
+    getTelemetry: async (_request, response) => {
+      await respond(response, async () => response.json(await sportsService.getTelemetry()), 'Could not load sports telemetry.');
+    },
   };
 }

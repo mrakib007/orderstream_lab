@@ -13,6 +13,7 @@ export function createApiRoutes(controllers) {
   router.get('/sports/matches/:matchId/events', controllers.sports.listEvents);
   router.post('/sports/matches/:matchId/simulate', controllers.sports.queueSimulation);
   router.get('/sports/fan-alerts', controllers.sports.listFanAlerts);
+  router.get('/sports/telemetry', controllers.sports.getTelemetry);
 
   return router;
 }

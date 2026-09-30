@@ -15,7 +15,7 @@ function parseOffset(value) {
   return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
 }
 
-async function describeGroup(admin, groupId, topic, logEnds) {
+async function describeGroup(admin, groupId, topics, logEndsByTopic) {
   let description;
   try {
     const result = await admin.describeGroups([groupId]);
@@ -23,7 +23,8 @@ async function describeGroup(admin, groupId, topic, logEnds) {
   } catch (error) {
     return {
       id: groupId,
-      topic,
+      topic: topics[0],
+      topics,
       state: 'unavailable',
       error: error.message,
       members: [],
@@ -44,37 +45,43 @@ async function describeGroup(admin, groupId, topic, logEnds) {
   let offsetError = '';
   if (description && description.state !== 'Dead') {
     try {
-      const offsets = await admin.fetchOffsets({ groupId, topics: [topic] });
-      committedOffsets = offsets.find((item) => item.topic === topic)?.partitions ?? [];
+      committedOffsets = await admin.fetchOffsets({ groupId, topics });
     } catch (error) {
       offsetError = error.message;
     }
   }
 
-  const committedByPartition = new Map(
-    committedOffsets.map((item) => [item.partition, parseOffset(item.offset)]),
-  );
-  const partitions = (logEnds ?? []).map((item) => {
-    const committedOffset = committedByPartition.get(item.partition) ?? null;
-    const logEndOffset = parseOffset(item.offset);
-    const hasOffsets = committedOffset !== null && logEndOffset !== null;
-    return {
-      partition: item.partition,
-      committedOffset,
-      logEndOffset,
-      lag: hasOffsets ? Math.max(0, logEndOffset - committedOffset) : null,
-    };
+  const partitions = topics.flatMap((topicName) => {
+    const topicOffsets = committedOffsets.find((item) => item.topic === topicName)?.partitions ?? [];
+    const committedByPartition = new Map(
+      topicOffsets.map((item) => [item.partition, parseOffset(item.offset)]),
+    );
+    return (logEndsByTopic.get(topicName) ?? []).map((item) => {
+      const committedOffset = committedByPartition.get(item.partition) ?? null;
+      const logEndOffset = parseOffset(item.offset);
+      const hasOffsets = committedOffset !== null && logEndOffset !== null;
+      return {
+        topic: topicName,
+        partition: item.partition,
+        committedOffset,
+        logEndOffset,
+        lag: hasOffsets ? Math.max(0, logEndOffset - committedOffset) : null,
+      };
+    });
   });
 
   const allKnown = partitions.length > 0 && partitions.every((item) => item.lag !== null);
-  const hasCommittedOffsets = committedOffsets.some((item) => parseOffset(item.offset) !== null);
+  const hasCommittedOffsets = committedOffsets.some((topicItem) =>
+    topicItem.partitions?.some((item) => parseOffset(item.offset) !== null),
+  );
   const state = !description || (description.state === 'Empty' && !hasCommittedOffsets)
     ? 'not-started'
     : (description?.state?.toLowerCase() ?? 'unknown');
 
   return {
     id: groupId,
-    topic,
+    topic: topics[0],
+    topics,
     state,
     members,
     partitions,
@@ -84,7 +91,7 @@ async function describeGroup(admin, groupId, topic, logEnds) {
   };
 }
 
-export async function getKafkaOverview(admin, topicNames, groupIds) {
+export async function getKafkaOverview(admin, topicNames, groupIds, groupTopicsByIndex) {
   const metadata = await admin.fetchTopicMetadata({ topics: topicNames });
   const topics = await Promise.all(topicNames.map(async (name) => {
     const topicMetadata = metadata.topics.find((item) => item.name === name);
@@ -98,11 +105,10 @@ export async function getKafkaOverview(admin, topicNames, groupIds) {
     return { name, partitions, partitionCount: partitions.length, logEnds };
   }));
 
-  const groupTopics = [topicNames[0], topicNames[1]];
+  const logEndsByTopic = new Map(topics.map((topic) => [topic.name, topic.logEnds]));
   const groups = await Promise.all(groupIds.map((id, index) => {
-    const topic = groupTopics[index];
-    const matchingTopic = topics.find((item) => item.name === topic);
-    return describeGroup(admin, id, topic, matchingTopic?.logEnds ?? []);
+    const assignedTopics = groupTopicsByIndex?.[index] ?? [topicNames[index] ?? topicNames[0]];
+    return describeGroup(admin, id, assignedTopics, logEndsByTopic);
   }));
 
   return { topics: topics.map(({ logEnds, ...topic }) => topic), groups };

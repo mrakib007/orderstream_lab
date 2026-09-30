@@ -55,7 +55,6 @@ export function createSportsSimulationModel(pool) {
         const lastEvent = event.eventType === 'match_completed';
         await client.query(
           'UPDATE sports_simulation_jobs SET next_event_sequence = next_event_sequence + 1, ' +
-          'lease_until = NOW() + INTERVAL \'45 seconds\', ' +
           'status = CASE WHEN $3 THEN \'completed\' ELSE status END, ' +
           'finished_at = CASE WHEN $3 THEN NOW() ELSE finished_at END, ' +
           'lease_owner = CASE WHEN $3 THEN NULL ELSE lease_owner END, ' +

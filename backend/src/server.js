@@ -2,16 +2,19 @@ import { config } from './config.js';
 import { pool } from './db.js';
 import { admin, producer } from './kafka.js';
 import { createApp } from './app.js';
+import { attachSportsWebSocket } from './websocket.js';
 
 const app = createApp({ pool, admin, producer, config });
 
 let server;
+let sportsWebSocket;
 let shuttingDown = false;
 
 async function shutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
 
+  if (sportsWebSocket) await sportsWebSocket.close().catch(() => {});
   if (server) await new Promise((resolve) => server.close(resolve));
   await admin.disconnect().catch(() => {});
   await producer.disconnect().catch(() => {});
@@ -28,6 +31,11 @@ try {
   server = app.listen(config.port, () => {
     console.log('OrderStream API listening at http://localhost:' + config.port);
   });
+  try {
+    sportsWebSocket = await attachSportsWebSocket(server);
+  } catch (error) {
+    console.error('Sports WebSocket gateway could not start:', error.message);
+  }
   console.log(
     'Connected to PostgreSQL and Kafka topics ' +
     config.ordersTopic + ' and ' + config.notificationsTopic + '.',

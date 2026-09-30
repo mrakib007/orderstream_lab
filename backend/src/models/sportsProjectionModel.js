@@ -8,10 +8,11 @@ export function createSportsProjectionModel(pool) {
   return {
     async applyEvent({ event, source }) {
       const client = await pool.connect();
-      let deferredError;
+      let inTransaction = false;
       let snapshot;
       try {
         await client.query('BEGIN');
+        inTransaction = true;
         const matchResult = await client.query(
           'SELECT match_id AS "matchId", home_team_id AS "homeTeamId", away_team_id AS "awayTeamId", ' +
           'status, home_score AS "homeScore", away_score AS "awayScore", ' +
@@ -31,6 +32,7 @@ export function createSportsProjectionModel(pool) {
           const duplicate = duplicateResult.rows[0];
           if (duplicate.eventId === event.eventId && Number(duplicate.sequence) === event.sequence) {
             await client.query('COMMIT');
+            inTransaction = false;
             return { duplicate: true, snapshot: match };
           }
           await client.query(
@@ -38,14 +40,14 @@ export function createSportsProjectionModel(pool) {
             [event.matchId],
           );
           await client.query('COMMIT');
-          deferredError = projectionError('SEQUENCE_CONFLICT', 'An event ID or match sequence conflicts with a stored event.');
-          returnAfterCommit();
+          inTransaction = false;
+          throw projectionError('SEQUENCE_CONFLICT', 'An event ID or match sequence conflicts with a stored event.');
         }
 
         if (match.reconciliationRequired) {
           await client.query('COMMIT');
-          deferredError = projectionError('RECONCILIATION_REQUIRED', 'The match is paused until its event history is reconciled.');
-          returnAfterCommit();
+          inTransaction = false;
+          throw projectionError('RECONCILIATION_REQUIRED', 'The match is paused until its event history is reconciled.');
         }
         if (event.sequence !== Number(match.lastEventSequence) + 1) {
           await client.query(
@@ -53,13 +55,14 @@ export function createSportsProjectionModel(pool) {
             [event.matchId],
           );
           await client.query('COMMIT');
-          deferredError = projectionError('SEQUENCE_GAP', 'Expected sequence ' + (Number(match.lastEventSequence) + 1) + ' but received ' + event.sequence + '.');
-          returnAfterCommit();
+          inTransaction = false;
+          throw projectionError('SEQUENCE_GAP', 'Expected sequence ' + (Number(match.lastEventSequence) + 1) + ' but received ' + event.sequence + '.');
         }
 
         let nextStatus = match.status;
         let homeScore = Number(match.homeScore);
         let awayScore = Number(match.awayScore);
+        let transitionError = null;
         const teamIsMatchParticipant = event.teamId === match.homeTeamId || event.teamId === match.awayTeamId;
         if (event.teamId && !teamIsMatchParticipant) {
           await client.query(
@@ -67,14 +70,14 @@ export function createSportsProjectionModel(pool) {
             [event.matchId],
           );
           await client.query('COMMIT');
-          deferredError = projectionError('INVALID_TEAM', 'The event team does not play in this match.');
-          returnAfterCommit();
+          inTransaction = false;
+          throw projectionError('INVALID_TEAM', 'The event team does not play in this match.');
         }
 
         switch (event.eventType) {
           case 'match_started':
             if (match.status !== 'scheduled') {
-              deferredError = projectionError('INVALID_TRANSITION', 'A match can start only from scheduled status.');
+              transitionError = projectionError('INVALID_TRANSITION', 'A match can start only from scheduled status.');
               break;
             }
             nextStatus = 'live';
@@ -83,7 +86,7 @@ export function createSportsProjectionModel(pool) {
           case 'yellow_card':
           case 'red_card':
             if (!['live', 'half_time'].includes(match.status) || !event.teamId) {
-              deferredError = projectionError('INVALID_TRANSITION', 'A goal or card requires a live match and a participating team.');
+              transitionError = projectionError('INVALID_TRANSITION', 'A goal or card requires a live match and a participating team.');
               break;
             }
             nextStatus = 'live';
@@ -94,29 +97,30 @@ export function createSportsProjectionModel(pool) {
             break;
           case 'half_time':
             if (match.status !== 'live') {
-              deferredError = projectionError('INVALID_TRANSITION', 'Half time can follow a live match only.');
+              transitionError = projectionError('INVALID_TRANSITION', 'Half time can follow a live match only.');
               break;
             }
             nextStatus = 'half_time';
             break;
           case 'match_completed':
             if (!['live', 'half_time'].includes(match.status)) {
-              deferredError = projectionError('INVALID_TRANSITION', 'A match can finish only after it has started.');
+              transitionError = projectionError('INVALID_TRANSITION', 'A match can finish only after it has started.');
               break;
             }
             nextStatus = 'finished';
             break;
           default:
-            deferredError = projectionError('UNKNOWN_EVENT_TYPE', 'The event type is not supported by the score projection.');
+            transitionError = projectionError('UNKNOWN_EVENT_TYPE', 'The event type is not supported by the score projection.');
         }
 
-        if (deferredError) {
+        if (transitionError) {
           await client.query(
             'UPDATE sports_matches SET reconciliation_required = TRUE, updated_at = NOW() WHERE match_id = $1',
             [event.matchId],
           );
           await client.query('COMMIT');
-          returnAfterCommit();
+          inTransaction = false;
+          throw transitionError;
         }
 
         const inserted = await client.query(
@@ -134,8 +138,8 @@ export function createSportsProjectionModel(pool) {
             [event.matchId],
           );
           await client.query('COMMIT');
-          deferredError = projectionError('SEQUENCE_CONFLICT', 'The event could not be stored because its key already exists.');
-          returnAfterCommit();
+          inTransaction = false;
+          throw projectionError('SEQUENCE_CONFLICT', 'The event could not be stored because its key already exists.');
         }
 
         const updatedResult = await client.query(
@@ -147,18 +151,14 @@ export function createSportsProjectionModel(pool) {
         );
         snapshot = updatedResult.rows[0];
         await client.query('COMMIT');
+        inTransaction = false;
       } catch (error) {
-        await client.query('ROLLBACK').catch(() => {});
+        if (inTransaction) await client.query('ROLLBACK').catch(() => {});
         throw error;
       } finally {
         client.release();
       }
-      if (deferredError) throw deferredError;
       return { duplicate: false, snapshot };
-
-      function returnAfterCommit() {
-        throw deferredError;
-      }
     },
   };
 }

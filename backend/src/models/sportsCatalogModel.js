@@ -60,6 +60,24 @@ export function createSportsCatalogModel(pool) {
       return result.rows;
     },
 
+    async getEventMetrics() {
+      const result = await pool.query(
+        'SELECT COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL \'60 seconds\')::int AS "eventsLastMinute", ' +
+        'COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL \'5 minutes\')::int AS "eventsLastFiveMinutes", ' +
+        'AVG(EXTRACT(EPOCH FROM (created_at - occurred_at)) * 1000) ' +
+        'FILTER (WHERE created_at >= NOW() - INTERVAL \'5 minutes\') AS "averageProjectionLatencyMs", ' +
+        'MAX(created_at) AS "lastProjectedAt" FROM sports_match_events',
+      );
+      const row = result.rows[0];
+      return {
+        ...row,
+        eventsPerSecond: Number(row.eventsLastMinute ?? 0) / 60,
+        averageProjectionLatencyMs: row.averageProjectionLatencyMs === null
+          ? null
+          : Number(row.averageProjectionLatencyMs),
+      };
+    },
+
     async queueSimulation(matchId) {
       const client = await pool.connect();
       try {

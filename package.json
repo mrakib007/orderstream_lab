@@ -12,6 +12,12 @@
     "dev:worker": "npm run worker --workspace backend",
     "dev:notifications": "npm run notifications --workspace backend",
     "dev:web": "npm run dev --workspace frontend",
+    "sports:simulator": "npm run sports:simulator --workspace backend",
+    "sports:outbox": "npm run sports:outbox --workspace backend",
+    "sports:score": "npm run sports:score --workspace backend",
+    "sports:fanout": "npm run sports:fanout --workspace backend",
+    "sports:alerts": "npm run sports:alerts --workspace backend",
+    "sports:analytics": "npm run sports:analytics --workspace backend",
     "db:init": "npm run db:init --workspace backend",
     "infra:up": "podman compose -f infra/compose.yaml up -d",
     "infra:down": "podman compose -f infra/compose.yaml down"

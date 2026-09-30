@@ -8,3 +8,12 @@ export function createRedisClient() {
   });
   return client;
 }
+
+export function closeRedisClient(client) {
+  if (!client?.isOpen) return;
+  try {
+    client.destroy();
+  } catch {
+    // A connection failure may close the socket between the isOpen check and destroy().
+  }
+}

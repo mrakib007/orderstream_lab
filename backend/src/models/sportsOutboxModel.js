@@ -3,15 +3,15 @@ export function createSportsOutboxModel(pool) {
     async claimNext(workerId) {
       const result = await pool.query(
         'WITH candidate AS (' +
-        '  SELECT current.outbox_id FROM sports_outbox_events current ' +
-        '  WHERE current.published_at IS NULL AND current.next_attempt_at <= NOW() ' +
-        '    AND (current.locked_until IS NULL OR current.locked_until <= NOW()) ' +
+        '  SELECT pending_event.outbox_id FROM sports_outbox_events pending_event ' +
+        '  WHERE pending_event.published_at IS NULL AND pending_event.next_attempt_at <= NOW() ' +
+        '    AND (pending_event.locked_until IS NULL OR pending_event.locked_until <= NOW()) ' +
         '    AND NOT EXISTS (' +
         '      SELECT 1 FROM sports_outbox_events earlier ' +
-        '      WHERE earlier.topic = current.topic AND earlier.message_key = current.message_key ' +
-        '        AND earlier.outbox_id < current.outbox_id AND earlier.published_at IS NULL' +
+        '      WHERE earlier.topic = pending_event.topic AND earlier.message_key = pending_event.message_key ' +
+        '        AND earlier.outbox_id < pending_event.outbox_id AND earlier.published_at IS NULL' +
         '    ) ' +
-        '  ORDER BY current.outbox_id FOR UPDATE SKIP LOCKED LIMIT 1' +
+        '  ORDER BY pending_event.outbox_id FOR UPDATE SKIP LOCKED LIMIT 1' +
         ') ' +
         'UPDATE sports_outbox_events e SET locked_by = $1, locked_until = NOW() + INTERVAL \'45 seconds\', ' +
         'attempts = e.attempts + 1 FROM candidate c WHERE e.outbox_id = c.outbox_id ' +

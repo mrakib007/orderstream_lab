@@ -32,7 +32,10 @@ export function createApp({ pool, admin, producer, config, logger = console }) {
     learning: createLearningController(
       createLearningService({ pool, admin, config, learningModel, productModel }),
     ),
-    sports: createSportsController(createSportsCatalogService(sportsCatalogModel), logger),
+    sports: createSportsController(
+      createSportsCatalogService(sportsCatalogModel, { admin, config }),
+      logger,
+    ),
   };
 
   const app = express();

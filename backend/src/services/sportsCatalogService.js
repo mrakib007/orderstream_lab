@@ -1,6 +1,7 @@
 import { HttpError } from '../errors/HttpError.js';
+import { getKafkaOverview } from '../kafka-overview.js';
 
-export function createSportsCatalogService(catalogModel) {
+export function createSportsCatalogService(catalogModel, { admin, config } = {}) {
   return {
     listMatches() {
       return catalogModel.listMatches();
@@ -32,6 +33,39 @@ export function createSportsCatalogService(catalogModel) {
         ? fanIdInput.trim().slice(0, 120)
         : 'demo-fan';
       return catalogModel.listFanAlerts(fanId);
+    },
+
+    async getTelemetry() {
+      const topicNames = [
+        config.sportsMatchEventsTopic,
+        config.sportsAlertEventsTopic,
+        config.sportsDeadLetterTopic,
+      ];
+      const groupIds = [
+        config.sportsScoreGroupId,
+        config.sportsFanoutGroupId,
+        config.sportsAlertsGroupId,
+        config.sportsAnalyticsGroupId,
+      ];
+      const groupTopics = [
+        [config.sportsMatchEventsTopic],
+        [config.sportsMatchEventsTopic, config.sportsAlertEventsTopic],
+        [config.sportsMatchEventsTopic],
+        [config.sportsMatchEventsTopic],
+      ];
+      const [metrics, kafka] = await Promise.all([
+        catalogModel.getEventMetrics(),
+        getKafkaOverview(admin, topicNames, groupIds, groupTopics)
+          .then((overview) => ({ ...overview, error: null }))
+          .catch((error) => ({ topics: [], groups: [], error: error.message })),
+      ]);
+      return {
+        collectedAt: new Date().toISOString(),
+        metrics,
+        topics: kafka.topics,
+        groups: kafka.groups,
+        errors: { kafka: kafka.error },
+      };
     },
   };
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import SportsDashboard from './SportsDashboard.jsx';
 
 async function getJson(url, options) {
   const response = await fetch(url, options);
@@ -166,6 +167,8 @@ export default function App() {
           <HealthPill label="Kafka" service={overview?.services?.kafka} />
           <HealthPill label="Postgres" service={overview?.services?.database} />
           <a className="nav-link" href="http://localhost:8080" target="_blank" rel="noreferrer">Kafka UI ↗</a>
+          <a className="nav-link" href="#sports">Sports Lab ↓</a>
+          <a className="nav-link" href="#orderstream">OrderStream ↓</a>
         </div>
       </header>
 
@@ -181,7 +184,9 @@ export default function App() {
         <aside className="hero-note"><span className="note-icon">i</span><div><strong>Refresh is read-only</strong><p>This page never sends orders by itself. One form submission sends one order.</p></div></aside>
       </section>
 
-      <section className="metrics-grid" aria-label="Order totals">
+      <SportsDashboard />
+
+      <section className="metrics-grid" aria-label="Order totals" id="orderstream">
         <article className="metric-card"><span className="metric-icon">▤</span><div><span className="micro-label">TOTAL ORDERS</span><strong>{totals.total ?? '—'}</strong></div></article>
         <article className="metric-card"><span className="metric-icon metric-green">✓</span><div><span className="micro-label">CONFIRMED</span><strong className="text-green">{totals.confirmed ?? '—'}</strong></div></article>
         <article className="metric-card"><span className="metric-icon metric-amber">!</span><div><span className="micro-label">OUT OF STOCK</span><strong className="text-amber">{totals.out_of_stock ?? '—'}</strong></div></article>

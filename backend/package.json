@@ -7,13 +7,20 @@
     "worker": "node --watch src/worker.js",
     "notifications": "node --watch src/notification-worker.js",
     "db:init": "node src/init-db.js",
-    "orders:bulk": "node scripts/send-orders.js"
+    "orders:bulk": "node scripts/send-orders.js",
+    "sports:simulator": "node --watch src/workers/sports-simulator.js",
+    "sports:outbox": "node --watch src/workers/sports-outbox.js",
+    "sports:score": "node --watch src/workers/sports-score-projection.js",
+    "sports:fanout": "node --watch src/workers/sports-live-fanout.js",
+    "sports:alerts": "node --watch src/workers/sports-fan-alerts.js",
+    "sports:analytics": "node --watch src/workers/sports-analytics.js"
   },
   "dependencies": {
     "dotenv": "^18.0.4",
     "express": "^5.2.1",
     "kafkajs": "^2.2.4",
     "pg": "^8.23.0",
-    "redis": "^6.2.1"
+    "redis": "^6.2.1",
+    "ws": "^8.22.0"
   }
 }
